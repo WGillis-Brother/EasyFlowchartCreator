@@ -1,0 +1,2007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Troubleshooting Flowchart Maker</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --primary: #3b82f6;
+      --primary-strong: #2563eb;
+      --line: #334155;
+      --danger: #f87171;
+      --shadow: 0 8px 24px rgba(2, 6, 23, 0.45);
+      --radius: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      z-index: 10;
+    }
+
+    .toolbar .group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-right: 8px;
+      border-right: 1px solid #334155;
+    }
+
+    .toolbar .group:last-child {
+      border-right: 0;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid #475569;
+      background: #0f172a;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    button:hover {
+      border-color: #64748b;
+      background: #172033;
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary-strong);
+    }
+
+    button.primary:hover {
+      background: var(--primary-strong);
+    }
+
+    button.danger {
+      background: #3a1616;
+      border-color: #7f1d1d;
+      color: var(--danger);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      height: 100%;
+      min-height: 0;
+      position: relative;
+    }
+
+    .panel {
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      padding: 14px;
+      padding-bottom: 34px;
+      overflow: auto;
+      position: relative;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    .panel h3 {
+      margin: 16px 0 8px;
+      font-size: 14px;
+      color: #cbd5e1;
+    }
+
+    .form-row {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .form-row label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .form-row input,
+    .form-row select,
+    .form-row textarea {
+      border: 1px solid #475569;
+      border-radius: 8px;
+      padding: 8px;
+      width: 100%;
+      background: #0b1220;
+      color: var(--text);
+    }
+
+    .form-row textarea {
+      resize: vertical;
+      min-height: 68px;
+      font-family: inherit;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+      margin-top: 4px;
+    }
+
+    .app-version {
+      position: absolute;
+      left: 12px;
+      bottom: 10px;
+      font-size: 11px;
+      color: #64748b;
+      opacity: 0.9;
+      z-index: 30;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .view-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #zoomSlider {
+      width: 100%;
+      accent-color: #3b82f6;
+    }
+
+    #zoomValue {
+      min-width: 44px;
+      text-align: right;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(90deg, rgba(100, 116, 139, 0.12) 1px, transparent 1px) 0 0 / 24px 24px,
+        linear-gradient(rgba(100, 116, 139, 0.12) 1px, transparent 1px) 0 0 / 24px 24px,
+        #0f172a;
+      padding: 24px;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .canvas-wrap.panning {
+      cursor: grabbing;
+    }
+
+    .canvas-hint {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 18px;
+      color: #94a3b8;
+      opacity: 0.13;
+      text-align: center;
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+      z-index: 5;
+      font-weight: 500;
+    }
+
+    #flowchart {
+      position: relative;
+      width: 2000px;
+      height: 1400px;
+      background: #111827;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      box-shadow: inset 0 0 0 1px #1f2937;
+      overflow: hidden;
+      transform-origin: top left;
+    }
+
+    #edges {
+      position: absolute;
+      inset: 0;
+      pointer-events: auto;
+    }
+
+    #edges line {
+      pointer-events: none;
+    }
+
+    .edge-delete-dot {
+      cursor: pointer;
+      pointer-events: all;
+    }
+
+    .node {
+      position: absolute;
+      width: 170px;
+      min-height: 68px;
+      padding: 10px;
+      border: 2px solid #94a3b8;
+      background: #0b1220;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: grab;
+      user-select: none;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+      transition: box-shadow 0.15s, border-color 0.15s;
+      white-space: pre-wrap;
+      line-height: 1.25;
+      overflow: visible;
+    }
+
+    .node.selected {
+      border-color: var(--primary);
+      box-shadow: 0 10px 22px rgba(37, 99, 235, 0.25);
+    }
+
+    .node.connect-from {
+      border-style: dashed;
+      border-color: #16a34a;
+    }
+
+    .node.process {
+      border-radius: 8px;
+    }
+
+    .node.decision {
+      width: 160px;
+      height: 160px;
+      min-height: 0;
+      transform: rotate(45deg);
+      padding: 0;
+    }
+
+    .node.decision > span {
+      transform: rotate(-45deg);
+      width: 72%;
+      display: inline-block;
+      pointer-events: auto;
+    }
+
+    .node > span {
+      cursor: text;
+      outline: none;
+    }
+
+    .node.terminator {
+      border-radius: 999px;
+    }
+
+    .connector-dot {
+      position: absolute;
+      top: -9px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #14532d;
+      background: #22c55e;
+      cursor: crosshair;
+      box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.6);
+      z-index: 4;
+    }
+
+    .node.decision .connector-dot {
+      left: -9px;
+      top: -9px;
+      transform: rotate(-45deg);
+    }
+
+    .resize-handle {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      right: -7px;
+      bottom: -7px;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      cursor: nwse-resize;
+      z-index: 4;
+    }
+
+    .node.process .resize-handle,
+    .node.decision .resize-handle {
+      right: -14px;
+      bottom: -14px;
+    }
+
+    .resize-handle::before,
+    .resize-handle::after {
+      content: '';
+      position: absolute;
+      border-right: 2px solid #93c5fd;
+      border-bottom: 2px solid #93c5fd;
+      width: 7px;
+      height: 7px;
+      transform: rotate(0deg);
+      filter: drop-shadow(0 0 1px rgba(29, 78, 216, 0.6));
+    }
+
+    .resize-handle::before {
+      right: 1px;
+      bottom: 1px;
+    }
+
+    .resize-handle::after {
+      right: 4px;
+      bottom: 4px;
+      opacity: 0.85;
+    }
+
+    .edge-label {
+      fill: #e2e8f0;
+      font-size: 12px;
+      font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .status {
+      font-size: 12px;
+      color: #cbd5e1;
+      padding: 4px 2px 0;
+      min-height: 18px;
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .divider {
+      border-top: 1px solid #334155;
+      margin: 12px 0;
+    }
+
+    .tutorial-panel {
+      background: var(--panel);
+      border-left: 1px solid var(--line);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 600px;
+      z-index: 25;
+      transition: width 0.2s ease;
+    }
+
+    body.tutorial-collapsed .tutorial-panel {
+      width: 44px;
+    }
+
+    .tutorial-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tutorial-header h2 {
+      margin: 0;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tutorial-content {
+      overflow: auto;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+      color: #d1d5db;
+    }
+
+    .tutorial-content p {
+      margin: 0 0 10px;
+    }
+
+    .example {
+      border: 1px solid #334155;
+      background: #0b1220;
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 8px;
+      color: #cbd5e1;
+    }
+
+    body.tutorial-collapsed .tutorial-content,
+    body.tutorial-collapsed .tutorial-header h2 {
+      display: none;
+    }
+
+    #toggleTutorial {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      padding: 0;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+      color: #dbeafe;
+      background: #1e3a8a;
+      border: 1px solid #3b82f6;
+      box-shadow: 0 2px 8px rgba(30, 58, 138, 0.45);
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+      font-size: 0;
+      position: relative;
+    }
+
+    #toggleTutorial::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid #dbeafe;
+      border-bottom: 2px solid #dbeafe;
+      transform: rotate(-45deg);
+      transition: transform 0.12s ease;
+      display: block;
+      margin-left: -1px;
+    }
+
+    body.tutorial-collapsed #toggleTutorial::before {
+      transform: rotate(135deg);
+      margin-left: 1px;
+    }
+
+    #toggleTutorial:hover {
+      background: #1d4ed8;
+      border-color: #60a5fa;
+      transform: translateY(-1px);
+    }
+
+    #toggleTutorial:active {
+      transform: translateY(0);
+    }
+
+    .context-menu {
+      position: fixed;
+      min-width: 150px;
+      background: #0b1220;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      box-shadow: 0 12px 24px rgba(2, 6, 23, 0.5);
+      padding: 6px;
+      display: none;
+      z-index: 1000;
+    }
+
+    .context-menu.open {
+      display: block;
+    }
+
+    .context-menu button {
+      width: 100%;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      color: #e5e7eb;
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    .context-menu button:hover {
+      background: #172033;
+    }
+
+    .node-palette {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .shape-btn {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      border: 2px solid #94a3b8;
+      background: #0b1220;
+      color: transparent;
+      outline: none;
+    }
+
+    .shape-btn:hover {
+      border-color: #cbd5e1;
+      background: #111a2d;
+    }
+
+    .shape-btn-process {
+      border-radius: 4px;
+    }
+
+    .shape-btn-decision {
+      border-radius: 2px;
+      transform: rotate(45deg);
+      width: 24px;
+      height: 24px;
+      margin: 3px;
+    }
+
+    .shape-btn-terminator {
+      border-radius: 999px;
+      width: 34px;
+    }
+
+    .properties-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1100;
+    }
+
+    .properties-modal.open {
+      display: flex;
+    }
+
+    .properties-card {
+      width: 300px;
+      background: #0b1220;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 18px 32px rgba(2, 6, 23, 0.55);
+    }
+
+    .properties-card h3 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+
+    .properties-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .properties-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .mini {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+
+    .section-sep {
+      border-top: 1px solid #334155;
+      margin: 10px 0 12px;
+    }
+  </style>
+</head>
+<body class="tutorial-collapsed">
+  <div class="toolbar">
+    <div class="group">
+      <button id="saveProject">Save Project</button>
+      <button id="loadProject">Load Project</button>
+      <input id="loadProjectInput" type="file" accept=".json,.flowchart.json,.tflow.json" hidden />
+    </div>
+    <div class="group">
+      <button id="exportPdf" class="primary">Export PDF</button>
+      <button id="clearAll">Clear All</button>
+    </div>
+    <span class="small">Tip: Click a shape to add a node • Drag nodes to rearrange • Drag corner handles to resize • Click a node to edit text • Drag green dots to connect • Click red dots to remove a connection</span>
+  </div>
+
+  <div class="workspace">
+    <aside class="panel">
+      <h2>Flowchart Editor</h2>
+
+      <div class="form-row">
+        <label for="chartTitle">Title</label>
+        <input id="chartTitle" placeholder="Troubleshooting Flow" value="Troubleshooting Flowchart" />
+      </div>
+
+      <div class="section-sep"></div>
+      <h3>Shapes</h3>
+      <div class="node-palette" aria-label="Add node buttons">
+        <button id="addProcess" class="shape-btn shape-btn-process" aria-label="Add Square/Rectangle node" title="Square/Rectangle"></button>
+        <button id="addDecision" class="shape-btn shape-btn-decision" aria-label="Add Diamond node" title="Diamond"></button>
+        <button id="addTerminator" class="shape-btn shape-btn-terminator" aria-label="Add Circle/Pill node" title="Circle/Pill"></button>
+      </div>
+
+      <div class="section-sep"></div>
+      <h3>Node Properties</h3>
+      <div class="form-row">
+        <label for="nodeText">Text</label>
+        <textarea id="nodeText" placeholder="Select a node to edit"></textarea>
+      </div>
+      <div class="form-row">
+        <label for="nodeType">Type</label>
+        <select id="nodeType">
+          <option value="process">Square/Rectangle</option>
+          <option value="decision">Diamond</option>
+          <option value="terminator">Circle/Pill</option>
+        </select>
+      </div>
+      <div class="properties-grid">
+        <div class="form-row">
+          <label for="nodeWidth">Width</label>
+          <input id="nodeWidth" type="number" min="70" />
+        </div>
+        <div class="form-row">
+          <label for="nodeHeight">Height</label>
+          <input id="nodeHeight" type="number" min="56" />
+        </div>
+      </div>
+
+      <div class="section-sep"></div>
+      <h3>Workspace Properties</h3>
+      <div class="form-row">
+        <label for="flowOrientation">Orientation</label>
+        <select id="flowOrientation">
+          <option value="landscape">Landscape</option>
+          <option value="portrait">Portrait</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label for="zoomSlider">Zoom</label>
+        <div class="view-row">
+          <input id="zoomSlider" type="range" min="25" max="200" step="1" value="100" />
+          <span id="zoomValue">100%</span>
+        </div>
+      </div>
+      <button id="fitToScreen" type="button">Fit to Screen</button>
+
+      <div class="divider"></div>
+      <p class="hint">
+        Keyboard shortcuts:<br />
+        <strong>Delete</strong> removes selected node.<br />
+        <strong>Ctrl/Cmd + P</strong> exports PDF.
+      </p>
+
+      <div id="status" class="status"></div>
+      <div id="appVersionLabel" class="app-version"></div>
+    </aside>
+
+    <main class="canvas-wrap">
+      <div id="flowchart" aria-label="Flowchart canvas">
+        <svg id="edges" viewBox="0 0 2000 1400" preserveAspectRatio="none">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"></path>
+            </marker>
+          </defs>
+        </svg>
+        <div class="canvas-hint">Click + drag to pan · Mouse wheel to zoom</div>
+      </div>
+    </main>
+
+    <aside class="tutorial-panel" id="tutorialPanel">
+      <div class="tutorial-header">
+        <h2>Quick Tutorial</h2>
+        <button id="toggleTutorial" title="Expand tutorial" aria-label="Expand tutorial"></button>
+      </div>
+      <div class="tutorial-content">
+        <p><strong>1) Set up the chart</strong><br />
+        Enter a title and pick <strong>Landscape</strong> or <strong>Portrait</strong>.</p>
+
+        <p><strong>2) Add shapes</strong><br />
+        Use sidebar shape buttons to add <strong>Square/Rectangle</strong>, <strong>Diamond</strong>, and <strong>Circle/Pill</strong> nodes.</p>
+
+        <p><strong>3) Edit text and properties</strong><br />
+        Click inside a node to edit text inline. Use <strong>Node Properties</strong> for text, type, and size. Right-click node → <strong>Properties</strong> for detailed edits.</p>
+
+        <p><strong>4) Move and resize</strong><br />
+        Drag nodes to move. Drag bottom-right chevron <strong>handles</strong> to resize.</p>
+
+        <p><strong>5) Connect and disconnect</strong><br />
+        Drag the green connector dot from one node to another to create a wire. Click the red dot on a wire to remove that connection.</p>
+
+        <p><strong>6) Navigate the workspace</strong><br />
+        Click and drag empty workspace to pan. Use mouse wheel over workspace to zoom in/out.</p>
+
+        <p><strong>7) Control zoom</strong><br />
+        Use the sidebar <strong>Zoom</strong> slider. Use <strong>Fit to Screen</strong> anytime to refit manually.</p>
+
+        <p><strong>8) Save and export</strong><br />
+        <strong>Save Project</strong> / <strong>Load Project</strong> preserve your editable JSON. <strong>Export PDF</strong> creates a light-mode printable copy.</p>
+
+        <div class="divider"></div>
+        <p><strong>Short examples</strong></p>
+        <div class="example">Print is banding: Circle/Pill "Issue: Banding Prints" → Rectangle "Run nozzle check" → Diamond "Missing nozzles?" → Rectangle "Yes: Clean printhead nozzle plate and caps" / Rectangle "No: Check print settings."</div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="nodeContextMenu" class="context-menu" role="menu" aria-label="Node actions">
+    <button id="menuProperties" type="button" role="menuitem">Properties</button>
+    <button id="menuCopy" type="button" role="menuitem">Copy</button>
+    <button id="menuDelete" type="button" role="menuitem">Delete</button>
+  </div>
+
+  <div id="propertiesModal" class="properties-modal" aria-hidden="true">
+    <div class="properties-card" role="dialog" aria-modal="true" aria-labelledby="propertiesTitle">
+      <h3 id="propertiesTitle">Edit Node</h3>
+      <div class="form-row">
+        <label for="propText">Text</label>
+        <textarea id="propText"></textarea>
+      </div>
+      <div class="form-row">
+        <label for="propType">Type</label>
+        <select id="propType">
+          <option value="process">Square/Rectangle</option>
+          <option value="decision">Diamond</option>
+          <option value="terminator">Circle/Pill</option>
+        </select>
+      </div>
+      <div class="properties-grid">
+        <div class="form-row">
+          <label for="propX">X</label>
+          <input id="propX" type="number" min="0" />
+        </div>
+        <div class="form-row">
+          <label for="propY">Y</label>
+          <input id="propY" type="number" min="0" />
+        </div>
+        <div class="form-row">
+          <label for="propW">Width</label>
+          <input id="propW" type="number" min="70" />
+        </div>
+        <div class="form-row">
+          <label for="propH">Height</label>
+          <input id="propH" type="number" min="56" />
+        </div>
+      </div>
+      <div class="properties-actions">
+        <button id="cancelProperties" type="button">Cancel</button>
+        <button id="saveProperties" type="button" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script>
+    const APP_VERSION = '1.0.2';
+    const chart = document.getElementById('flowchart');
+    const edgesSvg = document.getElementById('edges');
+    const canvasWrap = document.querySelector('.canvas-wrap');
+    const nodeTextInput = document.getElementById('nodeText');
+    const nodeTypeInput = document.getElementById('nodeType');
+    const nodeWidthInput = document.getElementById('nodeWidth');
+    const nodeHeightInput = document.getElementById('nodeHeight');
+    const zoomSliderInput = document.getElementById('zoomSlider');
+    const zoomValueEl = document.getElementById('zoomValue');
+    const fitToScreenBtn = document.getElementById('fitToScreen');
+    const statusEl = document.getElementById('status');
+    const toggleTutorialBtn = document.getElementById('toggleTutorial');
+    const chartTitleInput = document.getElementById('chartTitle');
+    const flowOrientationInput = document.getElementById('flowOrientation');
+    const loadProjectInput = document.getElementById('loadProjectInput');
+    const nodeContextMenu = document.getElementById('nodeContextMenu');
+    const menuPropertiesBtn = document.getElementById('menuProperties');
+    const menuCopyBtn = document.getElementById('menuCopy');
+    const menuDeleteBtn = document.getElementById('menuDelete');
+    const propertiesModal = document.getElementById('propertiesModal');
+    const propTextInput = document.getElementById('propText');
+    const propTypeInput = document.getElementById('propType');
+    const propXInput = document.getElementById('propX');
+    const propYInput = document.getElementById('propY');
+    const propWInput = document.getElementById('propW');
+    const propHInput = document.getElementById('propH');
+    const savePropertiesBtn = document.getElementById('saveProperties');
+    const cancelPropertiesBtn = document.getElementById('cancelProperties');
+    const appVersionLabel = document.getElementById('appVersionLabel');
+
+    const CANVAS_SIZES = {
+      landscape: { width: 2000, height: 1400 },
+      portrait: { width: 1400, height: 2000 }
+    };
+
+    appVersionLabel.textContent = `Version ${APP_VERSION}`;
+
+    const state = {
+      nodes: [],
+      edges: [],
+      selectedNodeId: null,
+      connectMode: false,
+      connectSourceId: null,
+      linkDrag: null,
+      contextNodeId: null,
+      propertiesNodeId: null,
+      orientation: 'landscape',
+      canvasWidth: CANVAS_SIZES.landscape.width,
+      canvasHeight: CANVAS_SIZES.landscape.height,
+      zoom: 1,
+      viewportX: 0,
+      viewportY: 0,
+      pan: null,
+      pointer: null,
+      drag: null,
+      resize: null,
+      nextId: 1
+    };
+
+    function setStatus(text) {
+      statusEl.textContent = text || '';
+    }
+
+    function hideContextMenu() {
+      nodeContextMenu.classList.remove('open');
+      state.contextNodeId = null;
+    }
+
+    function hidePropertiesModal() {
+      propertiesModal.classList.remove('open');
+      propertiesModal.setAttribute('aria-hidden', 'true');
+      state.propertiesNodeId = null;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function getCanvasWidth() {
+      return state.canvasWidth;
+    }
+
+    function getCanvasHeight() {
+      return state.canvasHeight;
+    }
+
+    function getScaledCanvasWidth() {
+      return getCanvasWidth() * state.zoom;
+    }
+
+    function getScaledCanvasHeight() {
+      return getCanvasHeight() * state.zoom;
+    }
+
+    function getViewportSize() {
+      const style = getComputedStyle(canvasWrap);
+      const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const padY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      return {
+        width: Math.max(0, canvasWrap.clientWidth - padX),
+        height: Math.max(0, canvasWrap.clientHeight - padY)
+      };
+    }
+
+    function getCanvasInnerPointFromClient(clientX, clientY) {
+      const wrapRect = canvasWrap.getBoundingClientRect();
+      const wrapStyle = getComputedStyle(canvasWrap);
+      const padLeft = parseFloat(wrapStyle.paddingLeft) || 0;
+      const padTop = parseFloat(wrapStyle.paddingTop) || 0;
+      return {
+        x: clientX - wrapRect.left - padLeft,
+        y: clientY - wrapRect.top - padTop
+      };
+    }
+
+    function clampViewport() {
+      const viewport = getViewportSize();
+      const minX = Math.min(0, viewport.width - getScaledCanvasWidth());
+      const minY = Math.min(0, viewport.height - getScaledCanvasHeight());
+      state.viewportX = clamp(state.viewportX, minX, 0);
+      state.viewportY = clamp(state.viewportY, minY, 0);
+    }
+
+    function applyViewportTransform() {
+      clampViewport();
+      chart.style.transform = `translate(${state.viewportX}px, ${state.viewportY}px) scale(${state.zoom})`;
+    }
+
+    function updateZoomUI() {
+      const pct = Math.round(state.zoom * 100);
+      zoomSliderInput.value = String(pct);
+      zoomValueEl.textContent = `${pct}%`;
+    }
+
+    function applyZoom(nextZoom, keepViewport = true, anchorClientPoint = null) {
+      const oldZoom = state.zoom;
+      const clampedZoom = clamp(nextZoom, 0.25, 2);
+
+      if (!keepViewport) {
+        state.viewportX = 0;
+        state.viewportY = 0;
+      } else if (anchorClientPoint && oldZoom > 0) {
+        const anchor = getCanvasInnerPointFromClient(anchorClientPoint.clientX, anchorClientPoint.clientY);
+        const worldX = (anchor.x - state.viewportX) / oldZoom;
+        const worldY = (anchor.y - state.viewportY) / oldZoom;
+        state.viewportX = anchor.x - worldX * clampedZoom;
+        state.viewportY = anchor.y - worldY * clampedZoom;
+      }
+
+      state.zoom = clampedZoom;
+      updateZoomUI();
+      applyViewportTransform();
+    }
+
+    function fitToScreen() {
+      const viewport = getViewportSize();
+      if (!viewport.width || !viewport.height) return;
+
+      const fitZoom = Math.min(viewport.width / getCanvasWidth(), viewport.height / getCanvasHeight(), 1);
+      applyZoom(fitZoom, false);
+    }
+
+    function applyOrientation(orientation, shouldRender = true) {
+      const safeOrientation = CANVAS_SIZES[orientation] ? orientation : 'landscape';
+      state.orientation = safeOrientation;
+      state.canvasWidth = CANVAS_SIZES[safeOrientation].width;
+      state.canvasHeight = CANVAS_SIZES[safeOrientation].height;
+
+      chart.style.width = `${state.canvasWidth}px`;
+      chart.style.height = `${state.canvasHeight}px`;
+      edgesSvg.setAttribute('viewBox', `0 0 ${state.canvasWidth} ${state.canvasHeight}`);
+
+      state.nodes.forEach(node => {
+        node.x = clamp(node.x, 0, state.canvasWidth - node.width);
+        node.y = clamp(node.y, 0, state.canvasHeight - node.height);
+      });
+
+      flowOrientationInput.value = safeOrientation;
+      applyViewportTransform();
+
+      if (shouldRender) {
+        render();
+      }
+    }
+
+    function showContextMenu(nodeId, clientX, clientY) {
+      state.contextNodeId = nodeId;
+      nodeContextMenu.classList.add('open');
+
+      const menuWidth = 160;
+      const menuHeight = 90;
+      const x = Math.min(clientX, window.innerWidth - menuWidth - 8);
+      const y = Math.min(clientY, window.innerHeight - menuHeight - 8);
+      nodeContextMenu.style.left = `${Math.max(8, x)}px`;
+      nodeContextMenu.style.top = `${Math.max(8, y)}px`;
+    }
+
+    function showNodeProperties(nodeId) {
+      const node = state.nodes.find(n => n.id === nodeId);
+      if (!node) return;
+      state.propertiesNodeId = node.id;
+
+      propTextInput.value = node.text;
+      propTypeInput.value = node.type;
+      propXInput.value = Math.round(node.x);
+      propYInput.value = Math.round(node.y);
+      propWInput.value = Math.round(node.width);
+      propHInput.value = Math.round(node.height);
+
+      propertiesModal.classList.add('open');
+      propertiesModal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => propTextInput.focus(), 0);
+    }
+
+    function saveNodeProperties() {
+      const node = state.nodes.find(n => n.id === state.propertiesNodeId);
+      if (!node) {
+        hidePropertiesModal();
+        return;
+      }
+
+      const nextType = propTypeInput.value;
+      const defaultMinW = nextType === 'decision' ? 70 : 100;
+      const defaultMinH = nextType === 'decision' ? 70 : 56;
+
+      let width = clamp(Number(propWInput.value) || node.width, defaultMinW, 700);
+      let height = clamp(Number(propHInput.value) || node.height, defaultMinH, 500);
+      if (nextType === 'decision') {
+        const size = clamp(Math.max(width, height), 70, 500);
+        width = size;
+        height = size;
+      }
+
+      const x = clamp(Number(propXInput.value) || 0, 0, getCanvasWidth() - width);
+      const y = clamp(Number(propYInput.value) || 0, 0, getCanvasHeight() - height);
+
+      node.text = propTextInput.value;
+      node.type = nextType;
+      node.width = width;
+      node.height = height;
+      node.x = x;
+      node.y = y;
+
+      render();
+      selectNode(node.id);
+      syncInspector();
+      hidePropertiesModal();
+      setStatus('Node properties updated.');
+    }
+
+    function copyNode(nodeId) {
+      const source = state.nodes.find(n => n.id === nodeId);
+      if (!source) return;
+
+      const id = `n${state.nextId++}`;
+      const copiedNode = {
+        id,
+        type: source.type,
+        text: source.text,
+        x: Math.min(source.x + 30, getCanvasWidth() - source.width),
+        y: Math.min(source.y + 30, getCanvasHeight() - source.height),
+        width: source.width,
+        height: source.height
+      };
+
+      state.nodes.push(copiedNode);
+      render();
+      selectNode(id);
+      setStatus('Node copied.');
+    }
+
+    function getProjectFileBaseName() {
+      const rawTitle = chartTitleInput.value.trim();
+      if (!rawTitle) return '';
+      return rawTitle
+        .replace(/[\\/:*?"<>|]+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function getProjectData() {
+      return {
+        app: 'Troubleshooting Flowchart Maker',
+        version: 1,
+        format: 'easy-flowchart-project',
+        schemaVersion: 1,
+        title: chartTitleInput.value.trim() || 'Untitled Project',
+        orientation: state.orientation,
+        canvas: { width: state.canvasWidth, height: state.canvasHeight },
+        nodes: state.nodes,
+        edges: state.edges
+      };
+    }
+
+    function saveProject() {
+      const fileBaseName = getProjectFileBaseName();
+      if (!fileBaseName) {
+        setStatus('Enter a project title before saving.');
+        chartTitleInput.focus();
+        return;
+      }
+
+      const data = getProjectData();
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileBaseName}.flowchart.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+
+      setStatus(`Project saved as ${fileBaseName}.flowchart.json`);
+    }
+
+    function applyLoadedProject(data) {
+      if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges)) {
+        throw new Error('Invalid project file format.');
+      }
+
+      state.nodes = data.nodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        text: node.text,
+        x: Number(node.x) || 0,
+        y: Number(node.y) || 0,
+        width: Number(node.width) || (node.type === 'decision' ? 160 : 170),
+        height: Number(node.height) || (node.type === 'decision' ? 160 : 72)
+      }));
+
+      state.edges = data.edges
+        .filter(edge => edge && edge.from && edge.to)
+        .map(edge => ({ from: edge.from, to: edge.to, label: edge.label || '' }));
+
+      state.selectedNodeId = null;
+      state.connectMode = false;
+      state.connectSourceId = null;
+      state.linkDrag = null;
+      state.contextNodeId = null;
+      state.pointer = null;
+      state.drag = null;
+      state.resize = null;
+
+      const maxId = state.nodes.reduce((max, node) => {
+        const num = Number(String(node.id || '').replace(/^n/, ''));
+        return Number.isFinite(num) ? Math.max(max, num) : max;
+      }, 0);
+      state.nextId = maxId + 1;
+
+      if (typeof data.title === 'string' && data.title.trim()) {
+        chartTitleInput.value = data.title.trim();
+      }
+
+      let loadedOrientation = 'landscape';
+      if (typeof data.orientation === 'string' && CANVAS_SIZES[data.orientation]) {
+        loadedOrientation = data.orientation;
+      } else if (data.canvas && Number(data.canvas.height) > Number(data.canvas.width)) {
+        loadedOrientation = 'portrait';
+      }
+
+      applyOrientation(loadedOrientation, false);
+
+      render();
+      syncInspector();
+      renderSelectionStyles();
+    }
+
+    function createNode(type, text, x = 120, y = 120) {
+      const id = `n${state.nextId++}`;
+      state.nodes.push({ id, type, text, x, y, width: type === 'decision' ? 160 : 170, height: type === 'decision' ? 160 : 72 });
+      render();
+      selectNode(id);
+      setStatus(`${type} node added.`);
+    }
+
+    function removeNode(nodeId) {
+      state.nodes = state.nodes.filter(n => n.id !== nodeId);
+      state.edges = state.edges.filter(e => e.from !== nodeId && e.to !== nodeId);
+      if (state.selectedNodeId === nodeId) {
+        state.selectedNodeId = null;
+      }
+      if (state.connectSourceId === nodeId) {
+        state.connectSourceId = null;
+      }
+      render();
+      syncInspector();
+      setStatus('Node deleted.');
+    }
+
+    function selectNode(nodeId) {
+      state.selectedNodeId = nodeId;
+      syncInspector();
+      renderSelectionStyles();
+    }
+
+    function syncInspector() {
+      const node = state.nodes.find(n => n.id === state.selectedNodeId);
+      if (!node) {
+        nodeTextInput.value = '';
+        nodeTypeInput.value = 'process';
+        nodeWidthInput.value = '';
+        nodeHeightInput.value = '';
+        return;
+      }
+      nodeTextInput.value = node.text;
+      nodeTypeInput.value = node.type;
+      nodeWidthInput.value = Math.round(node.width);
+      nodeHeightInput.value = Math.round(node.height);
+    }
+
+    function updateNodeSizeFromInspector(changedField) {
+      const node = state.nodes.find(n => n.id === state.selectedNodeId);
+      if (!node) return;
+
+      let width = Number(nodeWidthInput.value) || node.width;
+      let height = Number(nodeHeightInput.value) || node.height;
+
+      if (node.type === 'decision') {
+        const sourceValue = changedField === 'height' ? height : width;
+        const size = clamp(sourceValue, 70, 500);
+        width = size;
+        height = size;
+      } else {
+        width = clamp(width, 70, 700);
+        height = clamp(height, 56, 500);
+      }
+
+      width = Math.min(width, getCanvasWidth() - node.x);
+      height = Math.min(height, getCanvasHeight() - node.y);
+
+      node.width = width;
+      node.height = height;
+      render();
+      syncInspector();
+    }
+
+    function renderSelectionStyles() {
+      document.querySelectorAll('.node').forEach(nodeEl => {
+        const id = nodeEl.dataset.id;
+        nodeEl.classList.toggle('selected', id === state.selectedNodeId);
+        nodeEl.classList.toggle('connect-from', id === state.connectSourceId);
+      });
+    }
+
+    function getNodeCenter(node) {
+      return { x: node.x + node.width / 2, y: node.y + node.height / 2 };
+    }
+
+    function getNodeTopAnchor(node) {
+      if (node.type === 'decision') {
+        return { x: node.x + node.width / 2, y: node.y - node.width * 0.2 };
+      }
+      return { x: node.x + node.width / 2, y: node.y };
+    }
+
+    function getPointerInChart(event) {
+      const anchor = getCanvasInnerPointFromClient(event.clientX, event.clientY);
+      const localX = anchor.x - state.viewportX;
+      const localY = anchor.y - state.viewportY;
+
+      return {
+        x: Math.max(0, Math.min(getCanvasWidth(), localX / state.zoom)),
+        y: Math.max(0, Math.min(getCanvasHeight(), localY / state.zoom))
+      };
+    }
+
+    function getNodeIdFromPoint(clientX, clientY, excludeId) {
+      const hit = document.elementFromPoint(clientX, clientY);
+      if (!hit) return null;
+      const nodeEl = hit.closest('.node');
+      if (!nodeEl) return null;
+      const nodeId = nodeEl.dataset.id;
+      if (!nodeId || nodeId === excludeId) return null;
+      return nodeId;
+    }
+
+    function makeEl(tag, attrs = {}, text = '') {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      if (text) el.textContent = text;
+      return el;
+    }
+
+    function drawEdges() {
+      edgesSvg.querySelectorAll('.edge, .preview-edge').forEach(el => el.remove());
+      state.edges.forEach(edge => {
+        const fromNode = state.nodes.find(n => n.id === edge.from);
+        const toNode = state.nodes.find(n => n.id === edge.to);
+        if (!fromNode || !toNode) return;
+
+        const a = getNodeCenter(fromNode);
+        const b = getNodeCenter(toNode);
+
+        const group = makeEl('g', { class: 'edge' });
+        const line = makeEl('line', {
+          x1: a.x,
+          y1: a.y,
+          x2: b.x,
+          y2: b.y,
+          stroke: '#93c5fd',
+          'stroke-width': '2.5',
+          'marker-end': 'url(#arrow)'
+        });
+
+        group.appendChild(line);
+
+        const midX = (a.x + b.x) / 2;
+        const midY = (a.y + b.y) / 2;
+        const deleteDot = makeEl('circle', {
+          class: 'edge-delete-dot',
+          cx: midX,
+          cy: midY,
+          r: 4,
+          fill: '#ef4444',
+          stroke: '#7f1d1d',
+          'stroke-width': '1.2',
+          'data-from': edge.from,
+          'data-to': edge.to
+        });
+
+        group.appendChild(deleteDot);
+
+        edgesSvg.appendChild(group);
+      });
+
+      const previewSourceId = state.linkDrag?.sourceId || (state.connectMode ? state.connectSourceId : null);
+      if (previewSourceId && state.pointer) {
+        const sourceNode = state.nodes.find(n => n.id === previewSourceId);
+        if (!sourceNode) return;
+        const from = state.linkDrag ? getNodeTopAnchor(sourceNode) : getNodeCenter(sourceNode);
+        const preview = makeEl('line', {
+          class: 'preview-edge',
+          x1: from.x,
+          y1: from.y,
+          x2: state.pointer.x,
+          y2: state.pointer.y,
+          stroke: '#22c55e',
+          'stroke-width': '2',
+          'stroke-dasharray': '6 4',
+          'marker-end': 'url(#arrow)'
+        });
+        edgesSvg.appendChild(preview);
+      }
+    }
+
+    function addEdge(from, to, label = '') {
+      if (from === to) {
+        setStatus('Cannot connect a node to itself.');
+        return;
+      }
+      const exists = state.edges.some(e => e.from === from && e.to === to);
+      if (exists) {
+        setStatus('Connection already exists.');
+        return;
+      }
+      state.edges.push({ from, to, label });
+      drawEdges();
+      setStatus('Connection added.');
+    }
+
+    function removeEdge(from, to) {
+      const before = state.edges.length;
+      state.edges = state.edges.filter(edge => !(edge.from === from && edge.to === to));
+      if (state.edges.length !== before) {
+        drawEdges();
+        setStatus('Connection removed.');
+      }
+    }
+
+    function handleNodeClick(nodeId) {
+      selectNode(nodeId);
+
+      if (!state.connectMode) {
+        return;
+      }
+
+      if (!state.connectSourceId) {
+        state.connectSourceId = nodeId;
+        renderSelectionStyles();
+        setStatus('Source selected. Click target node.');
+      } else {
+        addEdge(state.connectSourceId, nodeId);
+        state.connectSourceId = null;
+        renderSelectionStyles();
+      }
+    }
+
+    function beginDrag(event, node) {
+      const point = getPointerInChart(event);
+      state.drag = {
+        id: node.id,
+        offsetX: point.x - node.x,
+        offsetY: point.y - node.y
+      };
+    }
+
+    function beginResize(event, node) {
+      state.resize = {
+        id: node.id,
+        startX: event.clientX,
+        startY: event.clientY,
+        startW: node.width,
+        startH: node.height
+      };
+    }
+
+    function beginLinkDrag(event, node) {
+      state.linkDrag = { sourceId: node.id, pointerId: event.pointerId };
+      state.pointer = getPointerInChart(event);
+      setStatus('Drag to another node and release to connect.');
+      drawEdges();
+    }
+
+    function endLinkDrag(event) {
+      if (!state.linkDrag) return;
+
+      const sourceId = state.linkDrag.sourceId;
+      const targetId = getNodeIdFromPoint(event.clientX, event.clientY, sourceId);
+      if (targetId) {
+        addEdge(sourceId, targetId);
+      } else {
+        setStatus('No target node selected for connection.');
+      }
+
+      state.linkDrag = null;
+      drawEdges();
+    }
+
+    function shouldStartPanning(event) {
+      if (event.button !== 0) return false;
+      const target = event.target;
+      if (!(target instanceof Element)) return false;
+      if (target.closest('.node')) return false;
+      if (target.closest('.edge-delete-dot')) return false;
+      return true;
+    }
+
+    function beginViewportPan(event) {
+      state.pan = {
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        startViewportX: state.viewportX,
+        startViewportY: state.viewportY
+      };
+      canvasWrap.classList.add('panning');
+    }
+
+    function onPointerMove(event) {
+      if (state.pan) {
+        const deltaX = event.clientX - state.pan.startClientX;
+        const deltaY = event.clientY - state.pan.startClientY;
+        state.viewportX = state.pan.startViewportX + deltaX;
+        state.viewportY = state.pan.startViewportY + deltaY;
+        applyViewportTransform();
+        return;
+      }
+
+      state.pointer = getPointerInChart(event);
+
+      if ((state.connectMode && state.connectSourceId) || state.linkDrag) {
+        drawEdges();
+      }
+
+      if (state.resize) {
+        const node = state.nodes.find(n => n.id === state.resize.id);
+        if (!node) return;
+
+        const deltaX = event.clientX - state.resize.startX;
+        const deltaY = event.clientY - state.resize.startY;
+        let width = Math.max(100, Math.min(700, state.resize.startW + deltaX));
+        let height = Math.max(56, Math.min(500, state.resize.startH + deltaY));
+
+        if (node.type === 'decision') {
+          const size = Math.max(70, Math.min(500, Math.max(width, height)));
+          width = size;
+          height = size;
+        }
+
+        width = Math.min(width, getCanvasWidth() - node.x);
+        height = Math.min(height, getCanvasHeight() - node.y);
+
+        node.width = width;
+        node.height = height;
+
+        const nodeEl = document.querySelector(`.node[data-id="${node.id}"]`);
+        if (nodeEl) {
+          nodeEl.style.width = `${node.width}px`;
+          nodeEl.style.height = `${node.height}px`;
+        }
+
+        drawEdges();
+        return;
+      }
+
+      if (!state.drag) return;
+      const node = state.nodes.find(n => n.id === state.drag.id);
+      if (!node) return;
+
+      let x = state.pointer.x - state.drag.offsetX;
+      let y = state.pointer.y - state.drag.offsetY;
+      x = Math.max(0, Math.min(getCanvasWidth() - node.width, x));
+      y = Math.max(0, Math.min(getCanvasHeight() - node.height, y));
+
+      node.x = x;
+      node.y = y;
+
+      const nodeEl = document.querySelector(`.node[data-id="${node.id}"]`);
+      if (nodeEl) {
+        nodeEl.style.left = `${node.x}px`;
+        nodeEl.style.top = `${node.y}px`;
+      }
+      drawEdges();
+    }
+
+    function endDrag() {
+      state.pan = null;
+      canvasWrap.classList.remove('panning');
+      state.drag = null;
+      state.resize = null;
+    }
+
+    function startInlineEdit(node, textEl) {
+      selectNode(node.id);
+      textEl.contentEditable = 'true';
+      textEl.dataset.originalText = node.text;
+      textEl.focus();
+
+      const selection = window.getSelection();
+      if (!selection) return;
+      const range = document.createRange();
+      range.selectNodeContents(textEl);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    function finishInlineEdit(node, textEl, commit) {
+      if (textEl.contentEditable !== 'true') return;
+
+      if (commit) {
+        node.text = textEl.textContent || '';
+      } else {
+        textEl.textContent = textEl.dataset.originalText || node.text;
+      }
+
+      textEl.contentEditable = 'false';
+      delete textEl.dataset.originalText;
+
+      if (state.selectedNodeId === node.id) {
+        syncInspector();
+      }
+    }
+
+    function renderNodes() {
+      document.querySelectorAll('.node').forEach(el => el.remove());
+
+      state.nodes.forEach(node => {
+        const el = document.createElement('div');
+        el.className = `node ${node.type}`;
+        el.dataset.id = node.id;
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+        el.style.width = `${node.width}px`;
+        el.style.height = `${node.height}px`;
+
+        const textEl = document.createElement('span');
+        textEl.textContent = node.text;
+        textEl.contentEditable = 'false';
+
+        textEl.addEventListener('pointerdown', event => {
+          event.stopPropagation();
+        });
+
+        textEl.addEventListener('click', event => {
+          event.stopPropagation();
+          startInlineEdit(node, textEl);
+        });
+
+        textEl.addEventListener('blur', () => {
+          finishInlineEdit(node, textEl, true);
+        });
+
+        textEl.addEventListener('keydown', event => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            finishInlineEdit(node, textEl, false);
+            textEl.blur();
+            return;
+          }
+
+          if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            finishInlineEdit(node, textEl, true);
+            textEl.blur();
+          }
+        });
+
+        el.appendChild(textEl);
+
+        const connectorDot = document.createElement('div');
+        connectorDot.className = 'connector-dot';
+        connectorDot.title = 'Drag to connect';
+        connectorDot.addEventListener('pointerdown', event => {
+          event.stopPropagation();
+          beginLinkDrag(event, node);
+          connectorDot.setPointerCapture(event.pointerId);
+        });
+        connectorDot.addEventListener('pointermove', event => {
+          if (!state.linkDrag || state.linkDrag.pointerId !== event.pointerId) return;
+          state.pointer = getPointerInChart(event);
+          drawEdges();
+        });
+        connectorDot.addEventListener('pointerup', event => {
+          if (!state.linkDrag || state.linkDrag.pointerId !== event.pointerId) return;
+          endLinkDrag(event);
+          connectorDot.releasePointerCapture(event.pointerId);
+        });
+        el.appendChild(connectorDot);
+
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'resize-handle';
+        resizeHandle.title = 'Resize node';
+        resizeHandle.addEventListener('pointerdown', event => {
+          event.stopPropagation();
+          beginResize(event, node);
+          resizeHandle.setPointerCapture(event.pointerId);
+        });
+        resizeHandle.addEventListener('pointerup', event => {
+          resizeHandle.releasePointerCapture(event.pointerId);
+          endDrag();
+        });
+        el.appendChild(resizeHandle);
+
+        el.addEventListener('pointerdown', event => {
+          if (event.button !== 0) return;
+          beginDrag(event, node);
+          el.setPointerCapture(event.pointerId);
+        });
+
+        el.addEventListener('pointerup', event => {
+          endDrag();
+          handleNodeClick(node.id);
+          el.releasePointerCapture(event.pointerId);
+        });
+
+        el.addEventListener('contextmenu', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          selectNode(node.id);
+          showContextMenu(node.id, event.clientX, event.clientY);
+        });
+
+        chart.appendChild(el);
+      });
+
+      renderSelectionStyles();
+    }
+
+    function render() {
+      renderNodes();
+      drawEdges();
+    }
+
+    function setNodeType(nodeId, newType) {
+      const node = state.nodes.find(n => n.id === nodeId);
+      if (!node) return;
+      node.type = newType;
+      if (newType === 'decision') {
+        node.width = 160;
+        node.height = 160;
+      } else {
+        node.width = 170;
+        node.height = 72;
+      }
+      node.x = Math.min(node.x, getCanvasWidth() - node.width);
+      node.y = Math.min(node.y, getCanvasHeight() - node.height);
+      render();
+    }
+
+    async function exportPdf() {
+      const chartTitle = chartTitleInput.value.trim() || 'Troubleshooting Flowchart';
+      setStatus('Generating PDF...');
+
+      const clone = chart.cloneNode(true);
+      clone.style.borderRadius = '0';
+      clone.style.boxShadow = 'none';
+      clone.style.background = '#ffffff';
+      clone.style.border = '1px solid #000000';
+
+      clone.querySelectorAll('.node').forEach(nodeEl => {
+        nodeEl.classList.remove('selected', 'connect-from');
+        nodeEl.style.background = '#ffffff';
+        nodeEl.style.color = '#000000';
+        nodeEl.style.borderColor = '#000000';
+        nodeEl.style.boxShadow = 'none';
+      });
+
+      clone.querySelectorAll('.connector-dot, .resize-handle').forEach(controlEl => {
+        controlEl.style.display = 'none';
+      });
+
+      clone.querySelectorAll('.canvas-hint').forEach(controlEl => {
+        controlEl.style.display = 'none';
+      });
+
+      clone.querySelectorAll('.edge-delete-dot').forEach(controlEl => {
+        controlEl.style.display = 'none';
+      });
+
+      clone.querySelectorAll('line').forEach(lineEl => {
+        lineEl.setAttribute('stroke', '#000000');
+      });
+
+      clone.querySelectorAll('.edge-label').forEach(labelEl => {
+        labelEl.setAttribute('fill', '#000000');
+      });
+
+      clone.querySelectorAll('rect').forEach(rectEl => {
+        rectEl.setAttribute('fill', '#ffffff');
+        rectEl.setAttribute('stroke', '#000000');
+      });
+
+      const markerPath = clone.querySelector('#arrow path');
+      if (markerPath) {
+        markerPath.setAttribute('fill', '#000000');
+      }
+
+      clone.style.position = 'fixed';
+      clone.style.left = '-99999px';
+      clone.style.top = '0';
+      document.body.appendChild(clone);
+
+      try {
+        let minX = 0;
+        let minY = 0;
+        let maxX = state.canvasWidth;
+        let maxY = state.canvasHeight;
+
+        if (state.nodes.length > 0) {
+          minX = Math.min(...state.nodes.map(node => node.x));
+          minY = Math.min(...state.nodes.map(node => node.y));
+          maxX = Math.max(...state.nodes.map(node => node.x + node.width));
+          maxY = Math.max(...state.nodes.map(node => node.y + node.height));
+        }
+
+        const padding = 80;
+        const cropX = clamp(minX - padding, 0, state.canvasWidth);
+        const cropY = clamp(minY - padding, 0, state.canvasHeight);
+        const cropW = clamp((maxX - minX) + padding * 2, 1, state.canvasWidth - cropX);
+        const cropH = clamp((maxY - minY) + padding * 2, 1, state.canvasHeight - cropY);
+
+        const canvas = await html2canvas(clone, {
+          backgroundColor: '#ffffff',
+          scale: 2.5,
+          useCORS: true,
+          x: cropX,
+          y: cropY,
+          width: cropW,
+          height: cropH
+        });
+
+        const img = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: state.orientation === 'portrait' ? 'portrait' : 'landscape', unit: 'pt', format: 'a4' });
+
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFontSize(18);
+        pdf.text(chartTitle, 20, 26);
+
+        const availableWidth = pageWidth - 24;
+        const availableHeight = pageHeight - 42;
+        const ratio = Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
+        const drawWidth = canvas.width * ratio;
+        const drawHeight = canvas.height * ratio;
+        const x = (pageWidth - drawWidth) / 2;
+        const y = 34 + (availableHeight - drawHeight) / 2;
+
+        pdf.addImage(img, 'PNG', x, y, drawWidth, drawHeight, undefined, 'FAST');
+        pdf.save(`${chartTitle.replace(/[^a-z0-9-_ ]/gi, '').trim() || 'flowchart'}.pdf`);
+        setStatus('PDF exported successfully.');
+      } catch (error) {
+        console.error(error);
+        setStatus('Failed to export PDF. Check browser console for details.');
+      } finally {
+        clone.remove();
+      }
+    }
+
+    document.getElementById('addProcess').addEventListener('click', () => {
+      createNode('process', 'Insert Text', 140 + state.nodes.length * 24, 120 + state.nodes.length * 24);
+    });
+
+    document.getElementById('addDecision').addEventListener('click', () => {
+      createNode('decision', 'Insert Text', 200 + state.nodes.length * 24, 180 + state.nodes.length * 24);
+    });
+
+    document.getElementById('addTerminator').addEventListener('click', () => {
+      createNode('terminator', 'Insert Text', 120 + state.nodes.length * 24, 60 + state.nodes.length * 24);
+    });
+
+    document.getElementById('saveProject').addEventListener('click', saveProject);
+
+    document.getElementById('loadProject').addEventListener('click', () => {
+      loadProjectInput.value = '';
+      loadProjectInput.click();
+    });
+
+    loadProjectInput.addEventListener('change', async event => {
+      const [file] = event.target.files || [];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        applyLoadedProject(data);
+        setStatus(`Project loaded from ${file.name}`);
+      } catch (error) {
+        console.error(error);
+        setStatus('Unable to load project file. Use a valid flowchart JSON file.');
+      }
+    });
+
+    toggleTutorialBtn.addEventListener('click', () => {
+      document.body.classList.toggle('tutorial-collapsed');
+      const collapsed = document.body.classList.contains('tutorial-collapsed');
+      toggleTutorialBtn.title = collapsed ? 'Expand tutorial' : 'Collapse tutorial';
+      toggleTutorialBtn.setAttribute('aria-label', collapsed ? 'Expand tutorial' : 'Collapse tutorial');
+    });
+
+    menuPropertiesBtn.addEventListener('click', () => {
+      if (!state.contextNodeId) return;
+      showNodeProperties(state.contextNodeId);
+      hideContextMenu();
+    });
+
+    menuCopyBtn.addEventListener('click', () => {
+      if (!state.contextNodeId) return;
+      copyNode(state.contextNodeId);
+      hideContextMenu();
+    });
+
+    menuDeleteBtn.addEventListener('click', () => {
+      if (!state.contextNodeId) return;
+      removeNode(state.contextNodeId);
+      hideContextMenu();
+    });
+
+    savePropertiesBtn.addEventListener('click', saveNodeProperties);
+    cancelPropertiesBtn.addEventListener('click', hidePropertiesModal);
+
+    propertiesModal.addEventListener('pointerdown', event => {
+      if (event.target === propertiesModal) {
+        hidePropertiesModal();
+      }
+    });
+
+    edgesSvg.addEventListener('pointerdown', event => {
+      const target = event.target;
+      if (!(target instanceof SVGElement)) return;
+      if (!target.classList.contains('edge-delete-dot')) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const from = target.getAttribute('data-from');
+      const to = target.getAttribute('data-to');
+      if (!from || !to) return;
+      removeEdge(from, to);
+    });
+
+    document.addEventListener('pointerdown', event => {
+      if (!nodeContextMenu.classList.contains('open')) return;
+      if (nodeContextMenu.contains(event.target)) return;
+      hideContextMenu();
+    });
+
+    window.addEventListener('blur', hideContextMenu);
+
+    document.getElementById('clearAll').addEventListener('click', () => {
+      if (!confirm('Clear the entire flowchart?')) return;
+      state.nodes = [];
+      state.edges = [];
+      state.selectedNodeId = null;
+      state.connectSourceId = null;
+      state.linkDrag = null;
+      state.drag = null;
+      state.resize = null;
+      state.pointer = null;
+      hideContextMenu();
+      hidePropertiesModal();
+      render();
+      syncInspector();
+      setStatus('Flowchart cleared.');
+    });
+
+    document.getElementById('exportPdf').addEventListener('click', exportPdf);
+
+    nodeTextInput.addEventListener('input', () => {
+      const node = state.nodes.find(n => n.id === state.selectedNodeId);
+      if (!node) return;
+      node.text = nodeTextInput.value;
+      const nodeEl = document.querySelector(`.node[data-id="${node.id}"] span`);
+      if (nodeEl) nodeEl.textContent = node.text;
+    });
+
+    nodeTypeInput.addEventListener('change', () => {
+      if (!state.selectedNodeId) return;
+      setNodeType(state.selectedNodeId, nodeTypeInput.value);
+    });
+
+    flowOrientationInput.addEventListener('change', () => {
+      applyOrientation(flowOrientationInput.value);
+      setStatus(`Orientation set to ${state.orientation}.`);
+    });
+
+    zoomSliderInput.addEventListener('input', () => {
+      applyZoom(Number(zoomSliderInput.value) / 100, true);
+    });
+
+    fitToScreenBtn.addEventListener('click', () => {
+      fitToScreen();
+    });
+
+    nodeWidthInput.addEventListener('change', () => {
+      updateNodeSizeFromInspector('width');
+    });
+
+    nodeHeightInput.addEventListener('change', () => {
+      updateNodeSizeFromInspector('height');
+    });
+
+    canvasWrap.addEventListener('pointerdown', event => {
+      if (!shouldStartPanning(event)) return;
+      beginViewportPan(event);
+      event.preventDefault();
+    });
+
+    canvasWrap.addEventListener('wheel', event => {
+      event.preventDefault();
+      const zoomStep = event.deltaY < 0 ? 1.06 : 0.94;
+      applyZoom(state.zoom * zoomStep, true, { clientX: event.clientX, clientY: event.clientY });
+    }, { passive: false });
+
+    document.addEventListener('pointermove', onPointerMove);
+    document.addEventListener('pointerup', endDrag);
+    window.addEventListener('resize', applyViewportTransform);
+
+    document.addEventListener('keydown', event => {
+      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      const isExportShortcut = isMac
+        ? event.metaKey && event.key.toLowerCase() === 'p'
+        : event.ctrlKey && event.key.toLowerCase() === 'p';
+      const isSaveShortcut = isMac
+        ? event.metaKey && event.key.toLowerCase() === 's'
+        : event.ctrlKey && event.key.toLowerCase() === 's';
+
+      if (isExportShortcut) {
+        event.preventDefault();
+        exportPdf();
+      }
+
+      if (isSaveShortcut) {
+        event.preventDefault();
+        saveProject();
+      }
+
+      if (event.key === 'Delete' && state.selectedNodeId) {
+        removeNode(state.selectedNodeId);
+      }
+
+      if (event.key === 'Escape' && propertiesModal.classList.contains('open')) {
+        hidePropertiesModal();
+      }
+    });
+
+    applyOrientation(state.orientation, false);
+    fitToScreen();
+    applyViewportTransform();
+
+    createNode('terminator', 'Identify the issue', 90, 60);
+    createNode('process', 'Question/Answer', 90, 190);
+    createNode('decision', 'Resolved? Yes/No', 340, 190);
+    addEdge('n1', 'n2');
+    addEdge('n2', 'n3');
+    state.selectedNodeId = null;
+    syncInspector();
+    renderSelectionStyles();
+    setStatus('');
+  </script>
+</body>
+</html>
