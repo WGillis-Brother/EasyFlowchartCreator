@@ -222,11 +222,11 @@
       position: relative;
       width: 2000px;
       height: 1400px;
-      background: #111827;
-      border: 1px solid #334155;
-      border-radius: 14px;
-      box-shadow: inset 0 0 0 1px #1f2937;
-      overflow: hidden;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      overflow: visible;
       transform-origin: top left;
     }
 
@@ -288,14 +288,38 @@
       padding: 0;
     }
 
-    .node.decision > span {
+    .node-content {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      pointer-events: none;
+    }
+
+    .node.decision > .node-content {
       transform: rotate(-45deg);
       width: 72%;
-      display: inline-block;
+    }
+
+    .node-photo {
+      width: 100%;
+      max-height: 90px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      pointer-events: auto;
+      cursor: zoom-in;
+    }
+
+    .node-text {
+      white-space: pre-wrap;
+      word-break: break-word;
       pointer-events: auto;
     }
 
-    .node > span {
+    .node > .node-content > .node-text {
       cursor: text;
       outline: none;
     }
@@ -383,6 +407,17 @@
     .small {
       font-size: 12px;
       color: var(--muted);
+    }
+
+    .file-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 6px;
+    }
+
+    .file-row button {
+      width: auto;
     }
 
     .divider {
@@ -583,6 +618,71 @@
       display: flex;
     }
 
+    .image-preview-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.82);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1200;
+      padding: 22px;
+    }
+
+    .image-preview-modal.open {
+      display: flex;
+    }
+
+    .image-preview-card {
+      position: relative;
+      max-width: min(92vw, 1300px);
+      max-height: 90vh;
+      width: fit-content;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      background: #0b1220;
+      box-shadow: 0 20px 44px rgba(2, 6, 23, 0.6);
+      overflow: hidden;
+    }
+
+    .image-preview-card img {
+      display: block;
+      max-width: min(92vw, 1300px);
+      max-height: calc(90vh - 56px);
+      width: auto;
+      height: auto;
+    }
+
+    .image-preview-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
+      border-top: 1px solid #334155;
+      color: #cbd5e1;
+      font-size: 12px;
+    }
+
+    .image-preview-close {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      border: 1px solid #64748b;
+      background: rgba(15, 23, 42, 0.92);
+      color: #e2e8f0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      line-height: 1;
+      padding: 0;
+    }
+
     .properties-card {
       width: 300px;
       background: #0b1220;
@@ -667,6 +767,14 @@
           <option value="decision">Diamond</option>
           <option value="terminator">Circle/Pill</option>
         </select>
+      </div>
+      <div class="form-row">
+        <label for="nodeImageInput">Photo</label>
+        <input id="nodeImageInput" type="file" accept="image/*" />
+        <div class="file-row">
+          <button id="nodeImageClear" type="button">Remove Photo</button>
+          <span id="nodeImageName" class="small">No photo</span>
+        </div>
       </div>
       <div class="properties-grid">
         <div class="form-row">
@@ -804,6 +912,16 @@
     </div>
   </div>
 
+  <div id="imagePreviewModal" class="image-preview-modal" aria-hidden="true">
+    <div class="image-preview-card" role="dialog" aria-modal="true" aria-labelledby="imagePreviewName">
+      <button id="closeImagePreview" class="image-preview-close" type="button" aria-label="Close photo preview">×</button>
+      <img id="imagePreviewImage" alt="Node photo preview" />
+      <div class="image-preview-meta">
+        <span id="imagePreviewName">Photo preview</span>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script>
@@ -815,6 +933,9 @@
     const nodeTypeInput = document.getElementById('nodeType');
     const nodeWidthInput = document.getElementById('nodeWidth');
     const nodeHeightInput = document.getElementById('nodeHeight');
+    const nodeImageInput = document.getElementById('nodeImageInput');
+    const nodeImageClearBtn = document.getElementById('nodeImageClear');
+    const nodeImageNameEl = document.getElementById('nodeImageName');
     const zoomSliderInput = document.getElementById('zoomSlider');
     const zoomValueEl = document.getElementById('zoomValue');
     const fitToScreenBtn = document.getElementById('fitToScreen');
@@ -828,6 +949,10 @@
     const menuCopyBtn = document.getElementById('menuCopy');
     const menuDeleteBtn = document.getElementById('menuDelete');
     const propertiesModal = document.getElementById('propertiesModal');
+    const imagePreviewModal = document.getElementById('imagePreviewModal');
+    const imagePreviewImage = document.getElementById('imagePreviewImage');
+    const imagePreviewName = document.getElementById('imagePreviewName');
+    const closeImagePreviewBtn = document.getElementById('closeImagePreview');
     const propTextInput = document.getElementById('propText');
     const propTypeInput = document.getElementById('propType');
     const propXInput = document.getElementById('propX');
@@ -838,10 +963,13 @@
     const cancelPropertiesBtn = document.getElementById('cancelProperties');
     const appVersionLabel = document.getElementById('appVersionLabel');
 
-    const CANVAS_SIZES = {
-      landscape: { width: 2000, height: 1400 },
-      portrait: { width: 1400, height: 2000 }
+    const CANVAS_MIN_SIZES = {
+      landscape: { width: 3200, height: 2200 },
+      portrait: { width: 2200, height: 3200 }
     };
+    const CANVAS_EXPAND_MARGIN = 140;
+    const CANVAS_EXPAND_STEP = 900;
+    const CANVAS_MAX_SIZE = { width: 50000, height: 50000 };
 
     appVersionLabel.textContent = `Version ${APP_VERSION}`;
 
@@ -855,8 +983,8 @@
       contextNodeId: null,
       propertiesNodeId: null,
       orientation: 'landscape',
-      canvasWidth: CANVAS_SIZES.landscape.width,
-      canvasHeight: CANVAS_SIZES.landscape.height,
+      canvasWidth: CANVAS_MIN_SIZES.landscape.width,
+      canvasHeight: CANVAS_MIN_SIZES.landscape.height,
       zoom: 1,
       viewportX: 0,
       viewportY: 0,
@@ -882,6 +1010,20 @@
       state.propertiesNodeId = null;
     }
 
+    function showImagePreview(src, name) {
+      imagePreviewImage.src = src;
+      imagePreviewName.textContent = name || 'Photo preview';
+      imagePreviewModal.classList.add('open');
+      imagePreviewModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function hideImagePreview() {
+      imagePreviewModal.classList.remove('open');
+      imagePreviewModal.setAttribute('aria-hidden', 'true');
+      imagePreviewImage.removeAttribute('src');
+      imagePreviewName.textContent = 'Photo preview';
+    }
+
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
     }
@@ -900,6 +1042,35 @@
 
     function getScaledCanvasHeight() {
       return getCanvasHeight() * state.zoom;
+    }
+
+    function applyCanvasSize() {
+      chart.style.width = `${state.canvasWidth}px`;
+      chart.style.height = `${state.canvasHeight}px`;
+      edgesSvg.setAttribute('viewBox', `0 0 ${state.canvasWidth} ${state.canvasHeight}`);
+    }
+
+    function ensureCanvasContains(maxX, maxY) {
+      let changed = false;
+      const requiredW = Math.max(0, maxX);
+      const requiredH = Math.max(0, maxY);
+
+      if (requiredW > state.canvasWidth - CANVAS_EXPAND_MARGIN) {
+        state.canvasWidth = clamp(requiredW + CANVAS_EXPAND_STEP, CANVAS_MIN_SIZES[state.orientation].width, CANVAS_MAX_SIZE.width);
+        changed = true;
+      }
+
+      if (requiredH > state.canvasHeight - CANVAS_EXPAND_MARGIN) {
+        state.canvasHeight = clamp(requiredH + CANVAS_EXPAND_STEP, CANVAS_MIN_SIZES[state.orientation].height, CANVAS_MAX_SIZE.height);
+        changed = true;
+      }
+
+      if (changed) {
+        applyCanvasSize();
+        applyViewportTransform();
+      }
+
+      return changed;
     }
 
     function getViewportSize() {
@@ -971,18 +1142,16 @@
     }
 
     function applyOrientation(orientation, shouldRender = true) {
-      const safeOrientation = CANVAS_SIZES[orientation] ? orientation : 'landscape';
+      const safeOrientation = CANVAS_MIN_SIZES[orientation] ? orientation : 'landscape';
       state.orientation = safeOrientation;
-      state.canvasWidth = CANVAS_SIZES[safeOrientation].width;
-      state.canvasHeight = CANVAS_SIZES[safeOrientation].height;
+      state.canvasWidth = Math.max(state.canvasWidth, CANVAS_MIN_SIZES[safeOrientation].width);
+      state.canvasHeight = Math.max(state.canvasHeight, CANVAS_MIN_SIZES[safeOrientation].height);
 
-      chart.style.width = `${state.canvasWidth}px`;
-      chart.style.height = `${state.canvasHeight}px`;
-      edgesSvg.setAttribute('viewBox', `0 0 ${state.canvasWidth} ${state.canvasHeight}`);
+      applyCanvasSize();
 
       state.nodes.forEach(node => {
-        node.x = clamp(node.x, 0, state.canvasWidth - node.width);
-        node.y = clamp(node.y, 0, state.canvasHeight - node.height);
+        node.x = Math.max(0, node.x);
+        node.y = Math.max(0, node.y);
       });
 
       flowOrientationInput.value = safeOrientation;
@@ -1041,8 +1210,8 @@
         height = size;
       }
 
-      const x = clamp(Number(propXInput.value) || 0, 0, getCanvasWidth() - width);
-      const y = clamp(Number(propYInput.value) || 0, 0, getCanvasHeight() - height);
+      const x = Math.max(0, Number(propXInput.value) || 0);
+      const y = Math.max(0, Number(propYInput.value) || 0);
 
       node.text = propTextInput.value;
       node.type = nextType;
@@ -1050,6 +1219,8 @@
       node.height = height;
       node.x = x;
       node.y = y;
+
+      ensureCanvasContains(node.x + node.width, node.y + node.height);
 
       render();
       selectNode(node.id);
@@ -1067,6 +1238,8 @@
         id,
         type: source.type,
         text: source.text,
+        image: source.image || '',
+        imageName: source.imageName || '',
         x: Math.min(source.x + 30, getCanvasWidth() - source.width),
         y: Math.min(source.y + 30, getCanvasHeight() - source.height),
         width: source.width,
@@ -1135,6 +1308,8 @@
         id: node.id,
         type: node.type,
         text: node.text,
+        image: typeof node.image === 'string' ? node.image : '',
+        imageName: typeof node.imageName === 'string' ? node.imageName : '',
         x: Number(node.x) || 0,
         y: Number(node.y) || 0,
         width: Number(node.width) || (node.type === 'decision' ? 160 : 170),
@@ -1165,13 +1340,16 @@
       }
 
       let loadedOrientation = 'landscape';
-      if (typeof data.orientation === 'string' && CANVAS_SIZES[data.orientation]) {
+      if (typeof data.orientation === 'string' && CANVAS_MIN_SIZES[data.orientation]) {
         loadedOrientation = data.orientation;
       } else if (data.canvas && Number(data.canvas.height) > Number(data.canvas.width)) {
         loadedOrientation = 'portrait';
       }
 
       applyOrientation(loadedOrientation, false);
+      const maxX = state.nodes.length ? Math.max(...state.nodes.map(node => node.x + node.width)) : 0;
+      const maxY = state.nodes.length ? Math.max(...state.nodes.map(node => node.y + node.height)) : 0;
+      ensureCanvasContains(maxX, maxY);
 
       render();
       syncInspector();
@@ -1180,7 +1358,18 @@
 
     function createNode(type, text, x = 120, y = 120) {
       const id = `n${state.nextId++}`;
-      state.nodes.push({ id, type, text, x, y, width: type === 'decision' ? 160 : 170, height: type === 'decision' ? 160 : 72 });
+      state.nodes.push({
+        id,
+        type,
+        text,
+        image: '',
+        imageName: '',
+        x,
+        y,
+        width: type === 'decision' ? 160 : 170,
+        height: type === 'decision' ? 160 : 72
+      });
+      ensureCanvasContains(x + (type === 'decision' ? 160 : 170), y + (type === 'decision' ? 160 : 72));
       render();
       selectNode(id);
       setStatus(`${type} node added.`);
@@ -1211,12 +1400,16 @@
       if (!node) {
         nodeTextInput.value = '';
         nodeTypeInput.value = 'process';
+        nodeImageInput.value = '';
+        nodeImageNameEl.textContent = 'No photo';
         nodeWidthInput.value = '';
         nodeHeightInput.value = '';
         return;
       }
       nodeTextInput.value = node.text;
       nodeTypeInput.value = node.type;
+      nodeImageInput.value = '';
+      nodeImageNameEl.textContent = node.imageName || (node.image ? 'Photo attached' : 'No photo');
       nodeWidthInput.value = Math.round(node.width);
       nodeHeightInput.value = Math.round(node.height);
     }
@@ -1238,11 +1431,9 @@
         height = clamp(height, 56, 500);
       }
 
-      width = Math.min(width, getCanvasWidth() - node.x);
-      height = Math.min(height, getCanvasHeight() - node.y);
-
       node.width = width;
       node.height = height;
+      ensureCanvasContains(node.x + node.width, node.y + node.height);
       render();
       syncInspector();
     }
@@ -1272,8 +1463,8 @@
       const localY = anchor.y - state.viewportY;
 
       return {
-        x: Math.max(0, Math.min(getCanvasWidth(), localX / state.zoom)),
-        y: Math.max(0, Math.min(getCanvasHeight(), localY / state.zoom))
+        x: Math.max(0, localX / state.zoom),
+        y: Math.max(0, localY / state.zoom)
       };
     }
 
@@ -1489,11 +1680,9 @@
           height = size;
         }
 
-        width = Math.min(width, getCanvasWidth() - node.x);
-        height = Math.min(height, getCanvasHeight() - node.y);
-
         node.width = width;
         node.height = height;
+        ensureCanvasContains(node.x + node.width, node.y + node.height);
 
         const nodeEl = document.querySelector(`.node[data-id="${node.id}"]`);
         if (nodeEl) {
@@ -1511,11 +1700,12 @@
 
       let x = state.pointer.x - state.drag.offsetX;
       let y = state.pointer.y - state.drag.offsetY;
-      x = Math.max(0, Math.min(getCanvasWidth() - node.width, x));
-      y = Math.max(0, Math.min(getCanvasHeight() - node.height, y));
+      x = Math.max(0, x);
+      y = Math.max(0, y);
 
       node.x = x;
       node.y = y;
+      ensureCanvasContains(node.x + node.width, node.y + node.height);
 
       const nodeEl = document.querySelector(`.node[data-id="${node.id}"]`);
       if (nodeEl) {
@@ -1576,7 +1766,26 @@
         el.style.width = `${node.width}px`;
         el.style.height = `${node.height}px`;
 
+        const contentEl = document.createElement('div');
+        contentEl.className = 'node-content';
+
+        if (node.image) {
+          const imageEl = document.createElement('img');
+          imageEl.className = 'node-photo';
+          imageEl.src = node.image;
+          imageEl.alt = node.imageName || 'Node photo';
+          imageEl.addEventListener('pointerdown', event => {
+            event.stopPropagation();
+          });
+          imageEl.addEventListener('click', event => {
+            event.stopPropagation();
+            showImagePreview(node.image, node.imageName);
+          });
+          contentEl.appendChild(imageEl);
+        }
+
         const textEl = document.createElement('span');
+        textEl.className = 'node-text';
         textEl.textContent = node.text;
         textEl.contentEditable = 'false';
 
@@ -1608,7 +1817,8 @@
           }
         });
 
-        el.appendChild(textEl);
+        contentEl.appendChild(textEl);
+        el.appendChild(contentEl);
 
         const connectorDot = document.createElement('div');
         connectorDot.className = 'connector-dot';
@@ -1695,6 +1905,9 @@
       setStatus('Generating PDF...');
 
       const clone = chart.cloneNode(true);
+      // Export should use chart coordinates, not current viewport zoom/pan transform.
+      clone.style.transform = 'none';
+      clone.style.transformOrigin = 'top left';
       clone.style.borderRadius = '0';
       clone.style.boxShadow = 'none';
       clone.style.background = '#ffffff';
@@ -1870,6 +2083,14 @@
       }
     });
 
+    closeImagePreviewBtn.addEventListener('click', hideImagePreview);
+
+    imagePreviewModal.addEventListener('pointerdown', event => {
+      if (event.target === imagePreviewModal) {
+        hideImagePreview();
+      }
+    });
+
     edgesSvg.addEventListener('pointerdown', event => {
       const target = event.target;
       if (!(target instanceof SVGElement)) return;
@@ -1915,8 +2136,49 @@
       const node = state.nodes.find(n => n.id === state.selectedNodeId);
       if (!node) return;
       node.text = nodeTextInput.value;
-      const nodeEl = document.querySelector(`.node[data-id="${node.id}"] span`);
+      const nodeEl = document.querySelector(`.node[data-id="${node.id}"] .node-text`);
       if (nodeEl) nodeEl.textContent = node.text;
+    });
+
+    nodeImageInput.addEventListener('change', event => {
+      const node = state.nodes.find(n => n.id === state.selectedNodeId);
+      if (!node) {
+        nodeImageInput.value = '';
+        return;
+      }
+
+      const [file] = event.target.files || [];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        setStatus('Please select an image file.');
+        nodeImageInput.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        node.image = typeof reader.result === 'string' ? reader.result : '';
+        node.imageName = file.name;
+        render();
+        syncInspector();
+        setStatus('Photo added to node.');
+      };
+      reader.onerror = () => {
+        setStatus('Could not read image file.');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    nodeImageClearBtn.addEventListener('click', () => {
+      const node = state.nodes.find(n => n.id === state.selectedNodeId);
+      if (!node) return;
+      node.image = '';
+      node.imageName = '';
+      nodeImageInput.value = '';
+      render();
+      syncInspector();
+      setStatus('Photo removed from node.');
     });
 
     nodeTypeInput.addEventListener('change', () => {
@@ -1986,6 +2248,10 @@
 
       if (event.key === 'Escape' && propertiesModal.classList.contains('open')) {
         hidePropertiesModal();
+      }
+
+      if (event.key === 'Escape' && imagePreviewModal.classList.contains('open')) {
+        hideImagePreview();
       }
     });
 
